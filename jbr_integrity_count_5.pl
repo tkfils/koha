@@ -227,6 +227,10 @@ my $field = $record->field('942');
 if ($field) {
 print $field->as_formatted(), "<br>";
 }
+my $field = $record->field('952');
+if ($field) {
+print $field->as_formatted(), "<br>";
+}
 $i++;
 }}
 
