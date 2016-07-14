@@ -19,7 +19,7 @@ package C4::Record;
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 #
-use strict;
+#use strict;
 #use warnings; FIXME - Bug 2505
 
 # please specify in which methods a given module is used
@@ -640,85 +640,178 @@ C<$id> - an id for the BibTex record (might be the biblionumber)
 sub marc2bibtex {
     my ($record, $id) = @_;
     my $tex;
-    my $marcflavour = C4::Context->preference("marcflavour");
-
+ my $marcflavour = C4::Context->preference("marcflavour");
+ 
     # Authors
     my $author;
-    my @texauthors;
-    my @authorFields = ('100','110','111','700','710','711');
-    @authorFields = ('700','701','702','710','711','721') if ( $marcflavour eq "UNIMARC" );
-
-    foreach my $field ( @authorFields ) {
+   my @texauthors;
+    my ( $mintag, $maxtag, $fields_filter );
+    if ( $marcflavour eq "UNIMARC" ) {
+        $mintag        = "700";
+        $maxtag        = "712";
+        $fields_filter = '7..';
+     }
+    else {
+        $mintag        = "700";
+        $maxtag        = "709";
+        $fields_filter = '7..';
+    }
+    foreach my $field ( $record->field($fields_filter) ) {
+        next unless $field->tag() >= $mintag && $field->tag() <= $maxtag;
         # author formatted surname, firstname
         my $texauthor = '';
         if ( $marcflavour eq "UNIMARC" ) {
-           $texauthor = join ', ',
-           ( $record->subfield($field,"a"), $record->subfield($field,"b") );
-       } else {
-           $texauthor = $record->subfield($field,"a");
-       }
-       push @texauthors, $texauthor if $texauthor;
+            $texauthor = join ', ',
+              ( $field->subfield('a'), $field->subfield('b') );
+        }
+        else {
+            $texauthor = $field->subfield('a');
+        }
+        push @texauthors, $texauthor if $texauthor;
+    }
+    # duplicate section to handle corporate authors as literal string
+        if ( $marcflavour eq "UNIMARC" ) {
+        $mintag        = "700";
+        $maxtag        = "712";
+        $fields_filter = '7..';
+     }
+    else {
+        $mintag        = "710";
+        $maxtag        = "719";
+        $fields_filter = '7..';
+    }
+    foreach my $field ( $record->field($fields_filter) ) {
+        next unless $field->tag() >= $mintag && $field->tag() <= $maxtag;
+        # author formatted surname, firstname
+        my $tex2author = '';
+        if ( $marcflavour eq "UNIMARC" ) {
+            $tex2author = join ', ',
+              ( $field->subfield('a'), $field->subfield('b') );
+        }
+        else {
+            $tex2author = '{'.$field->subfield('a').'}';
+        }
+        push @texauthors, $tex2author if $tex2author;
     }
     $author = join ' and ', @texauthors;
+    #Subjects section jbr
 
-    # Defining the conversion array according to the marcflavour
-    my @bh;
-    if ( $marcflavour eq "UNIMARC" ) {
+    my $marcsubjects = GetMarcSubjects($record,C4::Context->preference("marcflavour"));
+    my $subject;
+    for my $subjects ( map { map { @$_ } values %$_  } @$marcsubjects  ) {  
+	$subject .= ", " if ($subject && $$subjects{value});
+	$subject .= $$subjects{value} if ($$subjects{value}); 
+    }
 
-        # FIXME, TODO : handle repeatable fields
-        # TODO : handle more types of documents
+    # Source section jbr
+    my $source1 = "http://kingsfund.koha-ptfs.eu/cgi-bin/koha/opac-detail.pl?biblionumber=";
+    $source1 .= $id;
 
-        # Unimarc to bibtex array
-        @bh = (
+    # Defining the conversion hash according to the marcflavour
+    my %bh;
+     if ( $marcflavour eq "UNIMARC" ) {
+	
+	# FIXME, TODO : handle repeatable fields
+	# TODO : handle more types of documents
 
-            # Mandatory
-            author    => $author,
-            title     => $record->subfield("200", "a") || "",
-            editor    => $record->subfield("210", "g") || "",
-            publisher => $record->subfield("210", "c") || "",
-            year      => $record->subfield("210", "d") || $record->subfield("210", "h") || "",
+	# Unimarc to bibtex hash
+	%bh = (
 
-            # Optional
-            volume  =>  $record->subfield("200", "v") || "",
-            series  =>  $record->subfield("225", "a") || "",
-            address =>  $record->subfield("210", "a") || "",
-            edition =>  $record->subfield("205", "a") || "",
-            note    =>  $record->subfield("300", "a") || "",
-            url     =>  $record->subfield("856", "u") || ""
-        );
+	    # Mandatory
+	    author    => $author,
+	    title     => $record->subfield("200", "a") && $record->subfield("245", "b") || "",
+	    editor    => $record->subfield("210", "g") || "",
+	    publisher => $record->subfield("210", "c") || "",
+	    year      => $record->subfield("210", "d") || $record->subfield("210", "h") || "",
+	    
+	    # Optional
+	    volume  =>  $record->subfield("200", "v") || "",
+	    series  =>  $record->subfield("225", "a") || "",
+	    address =>  $record->subfield("210", "a") || "",
+	    edition =>  $record->subfield("205", "a") || "",
+	    note    =>  $record->subfield("300", "a") || "",
+	    url     =>  $record->subfield("856", "u") || ""
+	);
     } else {
+	# Marc21 to bibtex hash
+          # Section added to combine 245 a and b for title output
+            my $titlea = $record->subfield("245", "a") || "";
+            my $titleb = $record->subfield("245", "b") || "";
+            my $title1 = $titlea . $titleb;
+            $title1 =~ s/"/'/g;
+            my $mainauthor =  $record->subfield("100", "a") || "{".$record->subfield("110", "a")."}" || "";
+	    my $author1 = $mainauthor;
+            if ( $author ne "") {
+            $author1 .= " and " . $author;
+                                }
+            my $series1 = $record->subfield("490", "a") || "";
+            my $series2 = $record->subfield("490", "v") || "";
+            my $mainseries = $series1 . " " . $series2;
+            my $number1 = $record->subfield("773", "n") || "";
+            my $number2 = $record->subfield("773", "v") || "";
+            my $mainnumber = $number2 . " " . $number1;
+            my $volume1 = $record->subfield("248", "a") || "";
+            my $volume2 = $record->subfield("248", "b") || "";
+            my $mainvolume = $volume1 . " " . $volume2;
+            my $abstracta = $record->subfield("520", "a") || "";
+            my $abstractb = $record->subfield("500", "a") || "";
+            my $abstract1 = $abstracta . " " . $abstractb;
+            $abstract1 =~ s/"/'/g;
+            my $publisher1 = $record->subfield("260", "b") || "";
+            $publisher1 =~ s/\,//;
+            my $address1 = $record->subfield("260", "a") || "";
+            $address1 =~ s/\://;
 
-        # Marc21 to bibtex array
-        @bh = (
+	%bh = (
 
-            # Mandatory
-            author    => $author,
-            title     => $record->subfield("245", "a") || "",
-            editor    => $record->subfield("260", "f") || "",
-            publisher => $record->subfield("264", "b") || $record->subfield("260", "b") || "",
-            year      => $record->subfield("264", "c") || $record->subfield("260", "c") || $record->subfield("260", "g") || "",
+	    # Mandatory
+	    author    => $author1,
+            #institution => $author,
+            title     => $title1,
+            series    => $mainseries,
+            # number    => $mainnumber,
+#if ($volume1 EQ "") {
+#volume = > $record->subfield("773", "v" ||"",
+#                    }
+#else {
+#            volume    => $mainvolume,
+#     }
+            keywords  => $subject,
+	 #   title     => $record->subfield("245", "a") || "",
+	    editor    => $record->subfield("260", "f") || "",
+	    publisher => $publisher1,
+	    year      => $record->subfield("260", "c") || $record->subfield("773", "y") || "",
+            note      => $source1,
+            abstract  => $abstract1,
 
-            # Optional
-            # unimarc to marc21 specification says not to convert 200$v to marc21
-            series  =>  $record->subfield("490", "a") || "",
-            address =>  $record->subfield("264", "a") || $record->subfield("260", "a") || "",
-            edition =>  $record->subfield("250", "a") || "",
-            note    =>  $record->subfield("500", "a") || "",
-            url     =>  $record->subfield("856", "u") || ""
-        );
+	    # Optional
+	    # unimarc to marc21 specification says not to convert 200$v to marc21
+	    #series  =>  $record->subfield("490", "a") || "",
+	    address =>  $address1,
+	    edition =>  $record->subfield("250", "a") || "",
+	    # note    =>  $record->subfield("500", "a") || "",
+	    url     =>  $record->subfield("856", "u") || "",
+            month   =>  $record->subfield("773", "d") || "",
+            volume  =>  $record->subfield("773", "v") || "",
+            journal =>  $record->subfield("773", "t") || "",
+            number  =>  $record->subfield("773", "n") || "",
+            pages   =>  $record->subfield("773", "p") || "",
+            # abstract =>  $record->subfield("520", "a") || "",
+            isbn    =>  $record->subfield("020", "a") || "",
+            issn    =>  $record->subfield("021", "a") || ""
+	);
     }
-
-    $tex .= "\@book{";
-    my @elt;
-    for ( my $i = 0 ; $i < scalar( @bh ) ; $i = $i + 2 ) {
-        next unless $bh[$i+1];
-        push @elt, qq|\t$bh[$i] = {$bh[$i+1]}|;
-    }
-    $tex .= join(",\n", $id, @elt);
+if ($record->subfield("773", "v") eq ""){
+$tex .= "\@book{";
+                                        }
+else {
+    $tex .= "\@article{";
+     }
+    $tex .= join(",\n", $id, map { $bh{$_} ? qq(\t$_ = "$bh{$_}") : () } keys %bh);
     $tex .= "\n}\n";
-
     return $tex;
 }
+
 
 
 =head1 INTERNAL FUNCTIONS
