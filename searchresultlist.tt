@@ -53,6 +53,7 @@ function searchauthority() {
     
     [% INCLUDE 'authorities-toolbar.inc' %]
 <h1>Authority search results</h1>
+
 <div id="merge_in_progress"></div>
 [% IF ( total ) %]
 <div class="pages">[% pagination_bar %]</div>
@@ -67,7 +68,6 @@ function searchauthority() {
       <th colspan="2">Summary</th>
 [% UNLESS ( isEDITORS ) %]
       <th>Used in</th>
-      <th>Get it!</th>
 [% END %]
     [% IF ( CAN_user_editauthorities ) %]
       <th>&nbsp;</th>
@@ -85,7 +85,6 @@ function searchauthority() {
       <td>
         <a href="../catalogue/search.pl?type=intranet&amp;op=do_search&amp;idx=an,phr&amp;q=[% resul.authid %]" class="button">[% resul.used %] records(s)</a>
       </td>
-      <td><a href="javascript:doauth('[% resul.authid %]', '[% index %]', '')">choose</a></td>
   [% END %]
       [% IF ( CAN_user_editauthorities ) %]
           <td>
