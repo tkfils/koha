@@ -70,7 +70,7 @@ sub report {
       . $uriedit
       . $biblionumber
       . "\">$biblionumber</a>"
-      . "</td>\n <td>encode_utf8($url)</td>\n <td>"
+      . "</td>\n <td>$url</td>\n <td>"
       . "$hdr->{Status} $hdr->{Reason}</td>\n</tr>\n"
       : "$biblionumber\t$url\t" . "$hdr->{Status} $hdr->{Reason}\n";
 }
