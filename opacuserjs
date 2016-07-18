@@ -1,0 +1,26 @@
+$(document).ready(function(){
+var url=$(location).attr("href");
+var encodedUrl = encodeURIComponent(url);
+var carturl="mailto:?subject=Link to your cart&body=";
+var allurl= carturl + encodedUrl;
+$(".send").hide();
+$(".print-large").after("<a class='send' href=''>Email link</a>");
+$(".send").attr('href', allurl);
+$("#textArchiveLink").hide();
+// if (!$("#imageArchiveLink img").error(function(){
+// $("#textArchiveLink").show();
+//    });
+$("#masthead_search option[value='au']").after("<option value=\'kw,phr\'>Keyword Phrase</option>");
+$("#masthead_search option[value='se']").hide();
+$("#masthead_search option[value='callnum']").hide();
+if (window.location.href.indexOf("direction=desc") < 0){
+$("#sorting-form option[value='title']").removeAttr("selected");
+$("#sorting-form option[value='copyrightdate']").attr("selected","selected");
+$("#sorting-form option[value='asc']").removeAttr("selected");
+$("#sorting-form option[value='desc']").attr("selected","selected");
+$('#sorting-form').submit();
+}
+$(".selections").change(function(){
+enableCheckboxActions();
+});
+});
