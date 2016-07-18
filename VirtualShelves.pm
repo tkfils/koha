@@ -270,7 +270,7 @@ sub GetShelfContents {
     }
     my $query =
        " SELECT DISTINCT vc.biblionumber, vc.shelfnumber, vc.dateadded, itemtypes.*,
-            biblio.*, biblioitems.itemtype, biblioitems.publicationyear as year, biblioitems.publishercode, biblioitems.place, biblioitems.size, biblioitems.pages
+            biblio.*, biblioitems.itemtype, biblioitems.publicationyear as year, biblioitems.publishercode, biblioitems.place, biblioitems.size, biblioitems.pages, items.itype
          FROM   virtualshelfcontents vc
          JOIN biblio      ON      vc.biblionumber =      biblio.biblionumber
          LEFT JOIN biblioitems ON  biblio.biblionumber = biblioitems.biblionumber
@@ -279,7 +279,7 @@ sub GetShelfContents {
          WHERE  vc.shelfnumber=? ";
     my @params = ($shelfnumber);
     if($sortfield) {
-        $query .= " ORDER BY " . $dbh->quote_identifier( $sortfield );
+        $query .= " ORDER BY FIELD(items.itype, 'KFPUB', 'WEBPUBL', 'BOOK', 'THESIS', 'STATISTICS', 'ANNUALREP', 'E-ABSTRACT', 'ABSTRACT', 'MULTIMEDIA', 'WEBSITE', 'E-JOURNAL', 'JOURNAL', 'JOURNALSUP', 'KFGRANTS')," . $dbh->quote_identifier( $sortfield );
         $query .= " DESC " if ( $sort_direction eq 'desc' );
     }
     if($row_count){
