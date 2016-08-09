@@ -5,13 +5,12 @@
     <title>The King's Fund Style</title>
     <id>http://www.zotero.org/styles/tkftest3</id>
     <link href="http://www.zotero.org/styles/tkftest3" rel="self"/>
-    <link href="http://www.kcl.ac.uk/library/help/plagiarism/citing/index.aspx" rel="documentation"/>
     <author>
-      <name>William J Giddings</name>
+      <name>The King's Fund IKS</name>
     </author>
     <category citation-format="author-date"/>
     <category field="humanities"/>
-    <summary>Harvard author-date style created for King's College London</summary>
+    <summary>Harvard author-date style created for The King's Fund</summary>
     <updated>2014-10-09T16:16:38+00:00</updated>
     <rights license="http://creativecommons.org/licenses/by-sa/3.0/">This work is licensed under a Creative Commons Attribution-ShareAlike 3.0 License</rights>
   </info>
