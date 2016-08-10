@@ -264,6 +264,11 @@
           </group>
         </else>
       </choose>
+          <choose>
+      <if type="report" match="any">
+      <text variable="series" prefix=" " suffix="."/>
+      </if>
+    </choose>
       <text prefix=" " macro="access" suffix="."/>
     </layout>
   </bibliography>
