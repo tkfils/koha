@@ -1,0 +1,14 @@
+/* Hide login box on homepage and center message */
+#login {
+    display: none;
+}
+span.no-image {
+        display: none;
+    } 
+div#notloggedin div.first {
+    width: 100%;
+    margin: auto;
+}
+#logo {
+  background-image: url("http://www.kingsfundlibrary.co.uk/imgs/logo--kingsfund-black--small.png");
+} 
