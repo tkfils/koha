@@ -221,7 +221,7 @@ print $field->as_formatted(), "<br>";
 
 my @fields = $record->field('856');
 foreach my $field (@fields) {
-print "<a href=",$field->as_formatted(),">",$field->as_formatted(),"</a><br>";
+print "<a href=",$field->subfield("u"),">",$field->as_formatted(),"</a><br>";
 }
 my $field = $record->field('942');
 if ($field) {
