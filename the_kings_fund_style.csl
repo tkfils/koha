@@ -2,7 +2,7 @@
 <style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" class="in-text" demote-non-dropping-particle="sort-only" default-locale="en-GB" page-range-format="expanded">
 <!-- This style was edited with the Visual CSL Editor (http://editor.citationstyles.org/visualEditor/) -->
   <info>
-    <title>The King's Fund Style</title>
+    <title>The King's Fund Test Style 3.1</title>
     <id>http://www.zotero.org/styles/tkftest3</id>
     <link href="http://www.zotero.org/styles/tkftest3" rel="self"/>
     <author>
@@ -37,6 +37,7 @@
     <names variable="author">
       <name delimiter-precedes-last="never" et-al-min="19" et-al-use-first="19" et-al-use-last="true" initialize-with=" " name-as-sort-order="all" sort-separator=" "/>
       <label form="short" prefix=" (" suffix=")"/>
+<et-al font-style="italic" suffix="."/>
       <substitute>
         <names variable="editor"/>
         <text macro="anon"/>
@@ -46,6 +47,7 @@
   <macro name="author-short">
     <names variable="author">
       <name form="short" delimiter="" and="text" et-al-min="3" et-al-use-first="1" sort-separator=""/>
+<et-al font-style="italic" suffix="."/>
       <substitute>
         <names variable="editor"/>
         <names variable="translator"/>
@@ -169,7 +171,7 @@
       </group>
     </layout>
   </citation>
-  <bibliography hanging-indent="true" et-al-min="3" et-al-use-first="1">
+  <bibliography hanging-indent="false" et-al-min="3" et-al-use-first="1">
     <sort>
       <key macro="author"/>
       <key variable="title"/>
