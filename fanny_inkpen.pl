@@ -6,7 +6,7 @@
 use MARC::Batch;
 
 my $batch = MARC::Batch->new('USMARC','cart.iso2709');
-my $record = $batch->next();	
+#my $record = $batch->next();	
 while ( my $record = $batch->next() ) {
 print "\n\n";
 my $field = $record->field('100');
