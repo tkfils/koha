@@ -29,14 +29,16 @@ use MARC::File::XML; # marc2marcxml, marcxml2marc, changeEncoding
 use Biblio::EndnoteStyle;
 use Unicode::Normalize; # _entity_encode
 use C4::Biblio; #marc2bibtex
-use C4::Csv; #marc2csv
 use C4::Koha; #marc2csv
 use C4::XSLT ();
 use YAML; #marcrecords2csv
 use Template;
 use Text::CSV::Encoded; #marc2csv
+use Koha::Items;
 use Koha::SimpleMARC qw(read_field);
 use Koha::XSLT_Handler;
+use Koha::CsvProfiles;
+use Koha::AuthorisedValues;
 use Carp;
 
 use vars qw(@ISA @EXPORT);
@@ -227,7 +229,7 @@ EXAMPLE
     my dcxml = marc2dcxml (undef, undef, 1, "oaidc");
 
 Convert MARC or MARCXML to Dublin Core metadata (XSLT Transformation),
-optionally can get an XML directly from database (biblioitems.marcxml)
+optionally can get an XML directly from biblio_metadata
 without item information. This method take into consideration the syspref
 'marcflavour' (UNIMARC, MARC21 and NORMARC).
 Return an XML file with the format defined in C<$format>
@@ -236,7 +238,7 @@ C<$marc> - an ISO-2709 scalar or MARC::Record object
 
 C<$xml> - a MARCXML file
 
-C<$biblionumber> - obtain the record directly from database (biblioitems.marcxml)
+C<$biblionumber> - biblionumber for database access
 
 C<$format> - accept three type of DC formats (oaidc, srwdc, and rdfdc )
 
@@ -257,7 +259,7 @@ sub marc2dcxml {
         # no need to catch errors or warnings marc2marcxml do it instead
         $marcxml = C4::Record::marc2marcxml( $marc );
     } elsif ( not defined $xml and defined $biblionumber ) {
-        # get MARCXML biblio directly from biblioitems.marcxml without item information
+        # get MARCXML biblio directly without item information
         $marcxml = C4::Biblio::GetXmlBiblio( $biblionumber );
     } else {
         $marcxml = $xml;
@@ -401,7 +403,7 @@ Returns a CSV scalar
 
 C<$biblio> - a list of biblionumbers
 
-C<$csvprofileid> - the id of the CSV profile to use for the export (see export_format.export_format_id and the GetCsvProfiles function in C4::Csv)
+C<$csvprofileid> - the id of the CSV profile to use for the export (see export_format.export_format_id)
 
 C<$itemnumbers> - a list of itemnumbers to export
 
@@ -426,7 +428,8 @@ sub marc2csv {
     my $firstpass = 1;
     if ( @$itemnumbers ) {
         for my $itemnumber ( @$itemnumbers) {
-            my $biblionumber = GetBiblionumberFromItemnumber $itemnumber;
+            my $item = Koha::Items->find( $itemnumber );
+            my $biblionumber = $item->biblio->biblionumber;
             $output .= marcrecord2csv( $biblionumber, $id, $firstpass, $csv, $fieldprocessing, [$itemnumber] );
             $firstpass = 0;
         }
@@ -451,7 +454,7 @@ Returns a CSV scalar
 
 C<$biblio> - a biblionumber
 
-C<$csvprofileid> - the id of the CSV profile to use for the export (see export_format.export_format_id and the GetCsvProfiles function in C4::Csv)
+C<$csvprofileid> - the id of the CSV profile to use for the export (see export_format.export_format_id)
 
 C<$header> - true if the headers are to be printed (typically at first pass)
 
@@ -468,21 +471,21 @@ sub marcrecord2csv {
     my $output;
 
     # Getting the record
-    my $record = GetMarcBiblio($biblio);
+    my $record = GetMarcBiblio({ biblionumber => $biblio });
     return unless $record;
     C4::Biblio::EmbedItemsInMarcBiblio( $record, $biblio, $itemnumbers );
     # Getting the framework
     my $frameworkcode = GetFrameworkCode($biblio);
 
     # Getting information about the csv profile
-    my $profile = GetCsvProfile($id);
+    my $profile = Koha::CsvProfiles->find($id);
 
     # Getting output encoding
-    my $encoding          = $profile->{encoding} || 'utf8';
+    my $encoding          = $profile->encoding || 'utf8';
     # Getting separators
-    my $csvseparator      = $profile->{csv_separator}      || ',';
-    my $fieldseparator    = $profile->{field_separator}    || '#';
-    my $subfieldseparator = $profile->{subfield_separator} || '|';
+    my $csvseparator      = $profile->csv_separator      || ',';
+    my $fieldseparator    = $profile->field_separator    || '#';
+    my $subfieldseparator = $profile->subfield_separator || '|';
 
     # TODO: Be more generic (in case we have to handle other protected chars or more separators)
     if ($csvseparator eq '\t') { $csvseparator = "\t" }
@@ -496,7 +499,7 @@ sub marcrecord2csv {
     $csv->sep_char($csvseparator);
 
     # Getting the marcfields
-    my $marcfieldslist = $profile->{content};
+    my $marcfieldslist = $profile->content;
 
     # Getting the marcfields as an array
     my @marcfieldsarray = split('\|', $marcfieldslist);
@@ -585,18 +588,22 @@ sub marcrecord2csv {
                 # If it is a subfield
                 my @loop_values;
                 if ( $tag->{subfieldtag} ) {
+                    my $av = Koha::AuthorisedValues->search_by_marc_field({ frameworkcode => $frameworkcode, tagfield => $tag->{fieldtag}, tagsubfield => $tag->{subfieldtag}, });
+                    $av = $av->count ? $av->unblessed : [];
+                    my $av_description_mapping = { map { ( $_->{authorised_value} => $_->{lib} ) } @$av };
                     # For each field
                     foreach my $field (@fields) {
                         my @subfields = $field->subfield( $tag->{subfieldtag} );
                         foreach my $subfield (@subfields) {
-                            my $authvalues = GetKohaAuthorisedValuesFromField( $tag->{fieldtag}, $tag->{subfieldtag}, $frameworkcode, undef);
-                            push @loop_values, (defined $authvalues->{$subfield}) ? $authvalues->{$subfield} : $subfield;
+                            push @loop_values, (defined $av_description_mapping->{$subfield}) ? $av_description_mapping->{$subfield} : $subfield;
                         }
                     }
 
                 # Or a field
                 } else {
-                    my $authvalues = GetKohaAuthorisedValuesFromField( $tag->{fieldtag}, undef, $frameworkcode, undef);
+                    my $av = Koha::AuthorisedValues->search_by_marc_field({ frameworkcode => $frameworkcode, tagfield => $tag->{fieldtag}, });
+                    $av = $av->count ? $av->unblessed : [];
+                    my $authvalues = { map { ( $_->{authorised_value} => $_->{lib} ) } @$av };
 
                     foreach my $field ( @fields ) {
                         my $value;
@@ -727,62 +734,62 @@ sub marc2bibtex {
 
     # Authors
     my $author;
-   my @texauthors;
-    my ( $mintag, $maxtag, $fields_filter );
-    if ( $marcflavour eq "UNIMARC" ) {
-        $mintag        = "700";
-        $maxtag        = "712";
-        $fields_filter = '7..';
+    my @texauthors;
+     my ( $mintag, $maxtag, $fields_filter );
+     if ( $marcflavour eq "UNIMARC" ) {
+         $mintag        = "700";
+         $maxtag        = "712";
+         $fields_filter = '7..';
+      }
+     else {
+         $mintag        = "700";
+         $maxtag        = "709";
+         $fields_filter = '7..';
      }
-    else {
-        $mintag        = "700";
-        $maxtag        = "709";
-        $fields_filter = '7..';
-    }
-    foreach my $field ( $record->field($fields_filter) ) {
-        next unless $field->tag() >= $mintag && $field->tag() <= $maxtag;
+     foreach my $field ( $record->field($fields_filter) ) {
+         next unless $field->tag() >= $mintag && $field->tag() <= $maxtag;
         # author formatted surname, firstname
         my $texauthor = '';
         if ( $marcflavour eq "UNIMARC" ) {
-            $texauthor = join ', ',
-              ( $field->subfield('a'), $field->subfield('b') );
-        }
-        else {
-            $texauthor = $field->subfield('a');
-        }
-        push @texauthors, $texauthor if $texauthor;
-    }
-    # duplicate section to handle corporate authors as literal string
-        if ( $marcflavour eq "UNIMARC" ) {
-        $mintag        = "700";
-        $maxtag        = "712";
-        $fields_filter = '7..';
+             $texauthor = join ', ',
+               ( $field->subfield('a'), $field->subfield('b') );
+         }
+         else {
+             $texauthor = $field->subfield('a');
+         }
+         push @texauthors, $texauthor if $texauthor;
      }
-    else {
-        $mintag        = "710";
-        $maxtag        = "719";
-        $fields_filter = '7..';
-    }
-    foreach my $field ( $record->field($fields_filter) ) {
-        next unless $field->tag() >= $mintag && $field->tag() <= $maxtag;
-        # author formatted surname, firstname
-        my $tex2author = '';
-        if ( $marcflavour eq "UNIMARC" ) {
-            $tex2author = join ', ',
-              ( $field->subfield('a'), $field->subfield('b') );
-        }
-        else {
-            $tex2author = '{'.$field->subfield('a').'}';
-        }
-        push @texauthors, $tex2author if $tex2author;
+     # duplicate section to handle corporate authors as literal string
+         if ( $marcflavour eq "UNIMARC" ) {
+         $mintag        = "700";
+         $maxtag        = "712";
+         $fields_filter = '7..';
+      }
+     else {
+         $mintag        = "710";
+         $maxtag        = "719";
+         $fields_filter = '7..';
+     }
+     foreach my $field ( $record->field($fields_filter) ) {
+         next unless $field->tag() >= $mintag && $field->tag() <= $maxtag;
+         # author formatted surname, firstname
+         my $tex2author = '';
+         if ( $marcflavour eq "UNIMARC" ) {
+             $tex2author = join ', ',
+               ( $field->subfield('a'), $field->subfield('b') );
+         }
+         else {
+             $tex2author = '{'.$field->subfield('a').'}';
+         }
+         push @texauthors, $tex2author if $tex2author;
     }
     $author = join ' and ', @texauthors;
-
-    # Source section jbr
-    my $source1 = "http://kingsfund.koha-ptfs.eu/cgi-bin/koha/opac-detail.pl?biblionumber=";
-    $source1 .= $id;
-
-    # Defining the conversion array according to the marcflavour
+     
+	# Source section jbr
+     my $source1 = "http://kingsfund.koha-ptfs.eu/cgi-bin/koha/opac-detail.pl?biblionumber=";
+     $source1 .= $id;
+    
+	# Defining the conversion array according to the marcflavour
     my @bh;
     if ( $marcflavour eq "UNIMARC" ) {
 
@@ -810,21 +817,19 @@ sub marc2bibtex {
     } else {
 
         # Marc21 to bibtex array
-
-	    my $titlea = $record->subfield("245", "a") || "";
-            my $titleb = $record->subfield("245", "b") || "";
-            my $title1 = $titlea . $titleb;
-            $title1 =~ s/"/'/g;
-            my $mainauthor =  $record->subfield("100", "a") || "{".$record->subfield("110", "a")."}" || "";
-	    my $author1 = $mainauthor;
-            if ( $author ne "") {
-            $author1 .= " and ".$author;
-                                }
-            my $publisher1 = $record->subfield("260", "b") || "";
-            $publisher1 =~ s/\,//;                   
-            my $address1 = $record->subfield("260", "a") || "";
-            $address1 =~ s/\://;
-
+                       my $titlea = $record->subfield("245", "a") || "";
+             my $titleb = $record->subfield("245", "b") || "";
+             my $title1 = $titlea . $titleb;
+             $title1 =~ s/"/'/g;
+             my $mainauthor =  $record->subfield("100", "a") || "{".$record->subfield("110", "a")."}" || "";
+           my $author1 = $mainauthor;
+             if ( $author ne "") {
+             $author1 .= " and ".$author;
+                                 }
+             my $publisher1 = $record->subfield("260", "b") || "";
+             $publisher1 =~ s/\,//;
+             my $address1 = $record->subfield("260", "a") || "";
+             $address1 =~ s/\://;
 
         @bh = (
 
@@ -834,7 +839,7 @@ sub marc2bibtex {
             editor    => $record->subfield("260", "f") || "",
             publisher => $publisher1,
             year      => $record->subfield("260", "c") || $record->subfield("773", "y") || "",
-            number    => $record->subfield("490", "v") || $record->subfield("773", "n") || "",
+	    number    => $record->subfield("490", "v") || $record->subfield("773", "n") || "",
 
             # Optional
             # unimarc to marc21 specification says not to convert 200$v to marc21
@@ -903,17 +908,20 @@ sub marc2bibtex {
     }
 
     $tex .= "}\n";
-$tex =~ s/\@ABSTRACT/\@ARTICLE/;
-$tex =~ s/\@CIRCULAR/\@BOOK/;
-$tex =~ s/\@E-ABSTRACT/\@ARTICLE/;
-$tex =~ s/\@KFPUB/\@BOOK/;
-$tex =~ s/\@KFGRANTS/\@BOOK/;
-$tex =~ s/\@WEBPUBL/\@BOOK/;
-$tex =~ s/\@ANNUALREP/\@BOOK/;
-$tex =~ s/\@STATISTICS/\@BOOK/;
-$tex =~ s/\@THESIS/\@BOOK/;
-$tex =~ s/\@VIDEO/\@VIDEO RECORDING/;
-$tex =~ s/\@WEBSITE/\@ONLINE/;
+ if ($record->subfield("773", "v") eq ""){
+ $tex =~ s/\@ARTICLE/\@BOOK/;
+ }
+ $tex =~ s/\@ABSTRACT/\@ARTICLE/;
+ $tex =~ s/\@CIRCULAR/\@BOOK/;
+ $tex =~ s/\@E-ABSTRACT/\@ARTICLE/;
+ $tex =~ s/\@KFPUB/\@BOOK/;
+ $tex =~ s/\@KFGRANTS/\@BOOK/;
+ $tex =~ s/\@WEBPUBL/\@BOOK/;
+ $tex =~ s/\@ANNUALREP/\@BOOK/;
+ $tex =~ s/\@STATISTICS/\@BOOK/;
+ $tex =~ s/\@THESIS/\@BOOK/;
+ $tex =~ s/\@VIDEO/\@VIDEO RECORDING/;
+ $tex =~ s/\@WEBSITE/\@ONLINE/;
     return $tex;
 }
 
