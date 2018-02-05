@@ -55,9 +55,11 @@ my $checker1 = "";
 my $checker2 = "";
 my $checker3 = "";
 my $checker4 = "";
+my $checker5 = "";
+my $checker6 = "";
 
 while ($count < $idx){
-my $upto = $count % 40;
+my $upto = $count % 60;
 
 if ($upto == 0){
 $checker1 .= " | <a href=#"; 
@@ -99,13 +101,34 @@ $checker4 .=($count+9);
 $checker4 .= "</a>"; 
 }
 
+if ($upto == 40){
+$checker5 .= " | <a href=#";
+$checker5 .= $count; 
+$checker5 .= ">";
+$checker5 .= $count; 
+$checker5 .= " to "; 
+$checker5 .=($count+9);
+$checker5 .= "</a>"; 
+}
+
+if ($upto == 50){
+$checker6 .= " | <a href=#";
+$checker6 .= $count; 
+$checker6 .= ">";
+$checker6 .= $count; 
+$checker6 .= " to "; 
+$checker6 .=($count+9);
+$checker6 .= "</a>"; 
+}
+
 $count ++;
 }
 print "<div class=\"p-3 mb-2 ml-10 bg-light text-dark\">Nikki", $checker1, "</div>";
 print "<div class=\"p-3 mb-2 ml-10 bg-light text-dark\">Kathy", $checker2, "</div>";
 print "<div class=\"p-3 mb-2 ml-10 bg-light text-dark\">Hong-Anh", $checker3, "</div>";
 print "<div class=\"p-3 mb-2 ml-10 bg-light text-dark\">Ruth", $checker4, "</div>";
-
+print "<div class=\"p-3 mb-2 ml-10 bg-light text-dark\">Nick", $checker5, "</div>";
+print "<div class=\"p-3 mb-2 ml-10 bg-light text-dark\">Lynsey", $checker6, "</div>";
 
 my $i=0;
 my $batch = MARC::Batch->new('USMARC','koha.mrc');
