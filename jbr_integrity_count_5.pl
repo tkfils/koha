@@ -129,13 +129,13 @@ if ($test ne "INPROCESS") {
 my $field = $record->field('999');
 my $restrictor= $field->subfield("d");
 if ($restrictor > 1000){
-print "<div class=\"p-3 mb-2 bg-light text-dark\"><a name=", $i, ">Record number:", $i, " | <a target='_new' href='http://kingsfund.koha-ptfs.eu:8080/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber="; 
+print "<div class=\"p-3 mb-2 bg-light text-dark\"><a name=", $i, ">Record number:", $i, " | <a target='_new' href='https://staff-koha.kingsfund.org.uk/cgi-bin/koha/opac-detail.pl?biblionumber=/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber="; 
 print $field->subfield("d");
 print "'>Edit biblio</a>";
-print " | <a target='_new' href='http://kingsfund.koha-ptfs.eu/cgi-bin/koha/opac-detail.pl?biblionumber=";
+print " | <a target='_new' href='https://koha.kingsfund.org.uk/cgi-bin/koha/opac-detail.pl?biblionumber=";
 print $field->subfield("d");
 print "'>OPAC view</a>";
-print " | <a target='_new' href='http://kingsfund.koha-ptfs.eu:8080/cgi-bin/koha/catalogue/detail.pl?biblionumber=";
+print " | <a target='_new' href='https://staff-koha.kingsfund.org.uk/cgi-bin/koha/opac-detail.pl?biblionumber=/cgi-bin/koha/catalogue/detail.pl?biblionumber=";
 print $field->subfield("d");
 print "'>Cataloguing view</a>";
 print "</div>";
@@ -455,9 +455,10 @@ print "<th scope=\"row\">";
 my $number= substr($pretty, 0, 3);
 my $subdata= substr($pretty, 7, 2);
 my $data =substr($pretty, 9, );
+my($url, $rest) = split(/ /, $data, 2);
 print $number, "</th><td>";
 print $subdata;
-print "<a href=\"", $data, "\"</a>", $data, "</td></tr>";
+print "<a href=\"", $url, "\">", $url, "</a>", "&nbsp;", $rest, "</td></tr>";
 }
 
 
