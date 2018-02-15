@@ -455,9 +455,10 @@ print "<th scope=\"row\">";
 my $number= substr($pretty, 0, 3);
 my $subdata= substr($pretty, 7, 2);
 my $data =substr($pretty, 9, );
+my($url, $rest) = split(/ /, $data, 2);
 print $number, "</th><td>";
 print $subdata;
-print "<a href=\"", $data, "\"</a>", $data, "</td></tr>";
+print "<a href=\"", $url, "\">", $url, "</a>", "&nbsp;", $rest, "</td></tr>";
 }
 
 
