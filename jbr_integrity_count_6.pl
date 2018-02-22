@@ -140,13 +140,13 @@ if ($test ne "INPROCESS") {
 my $field = $record->field('999');
 my $restrictor= $field->subfield("d");
 if ($restrictor > 1000){
-print "<div class=\"p-3 mb-2 bg-light text-dark\"><a name=", $i, ">Record number:", $i, " | <a target='_new' href='https://staff-koha.kingsfund.org.uk/cgi-bin/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber="; 
+print "<div class=\"p-3 mb-2 bg-light text-dark\"><a name=", $i, ">Record number:", $i, " | <a target='_new' href='https://staff-koha.kingsfund.org.uk/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber="; 
 print $field->subfield("d");
 print "'>Edit biblio</a>";
 print " | <a target='_new' href='https://koha.kingsfund.org.uk/cgi-bin/koha/opac-detail.pl?biblionumber=";
 print $field->subfield("d");
 print "'>OPAC view</a>";
-print " | <a target='_new' href='https://staff-koha.kingsfund.org.uk/cgi-bin/cgi-bin/koha/catalogue/detail.pl?biblionumber=";
+print " | <a target='_new' href='https://staff-koha.kingsfund.org.uk/cgi-bin/koha/catalogue/detail.pl?biblionumber=";
 print $field->subfield("d");
 print "'>Cataloguing view</a>";
 print "</div>";
